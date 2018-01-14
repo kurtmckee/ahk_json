@@ -4,6 +4,9 @@ Parse JSON data in AutoHotkey
 
 `json.ahk` allows you to parse JSON data in AutoHotkey.
 
+It features Unicode support when loading and serializing JSON data, and uses
+AutoHotkey objects to support JSON lists and dictionaries.
+
 To load JSON data from a string, use the `json_load()` function.
 
 ..  code:: text
