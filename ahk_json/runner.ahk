@@ -51,6 +51,13 @@ identity(parameters)
 }
 
 
+load_file(parameters)
+{
+    fileread, blob, % parameters["filename"]
+    return json_load(blob)
+}
+
+
 exit_ahk(parameters)
 {
     exitapp, 2

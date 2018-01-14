@@ -170,62 +170,84 @@ json_dump(info)
 
 json_load(blob)
 {
-    if (substr(blob, 1, 1) == "[")
-    {
-        object_type := "list"
-        info := []
-    }
-    else
-    {
-        object_type := "dict"
-        info := {}
-    }
+    blob_length := strlen(blob)
+    index_left := 0
+    index_right := 0
 
-    ; The left and right indexes are used to extract substrings.
-    index_left := 2
-    index_right := index_left + 1
-    loop
+    ; Identify the object type.
+    loop, % blob_length
     {
-        ; Exit the loop when the end of the blob is reached.
-        if (index_right > strlen(blob))
+        index_left += 1
+
+        if (substr(blob, a_index, 1) == "[")
         {
+            object_type := "list"
+            info := []
             break
         }
+        else if (substr(blob, a_index, 1) == "{")
+        {
+            object_type := "dict"
+            info := {}
+            break
+        }
+    }
 
-        ; Only extract the key if this is a dictionary.
+    ; Extract all key/value pairs.
+    loop, % blob_length
+    {
+        ; Extract the key.
+        ; Use an integer key if this is a list object.
         if (object_type == "list")
         {
             key := info.length() + 1
         }
         else
         {
-            ; Find the left and right sides of the key.
-            loop
+            ; Find the left side of the key.
+            loop, % blob_length
             {
-                if (substr(blob, index_right, 1) == """")
+                index_left += 1
+
+                if (substr(blob, index_left, 1) == """")
                 {
                     break
                 }
+            }
+
+            index_right := index_left
+
+            ; Find the right side of the key.
+            loop, % blob_length
+            {
+                index_right += 1
+
+                ; Skip escaped characters, in case they are quotation marks.
                 if (substr(blob, index_right, 1) == "\")
                 {
                     index_right += 1
                 }
-                index_right += 1
-            }
-            escaped_key := substr(blob, index_left + 1, index_right - index_left - 1)
-            key := json_unescape(escaped_key)
-
-            ; Move the indexes.
-            index_left := index_right + 2
-            loop
-            {
-                if (substr(blob, index_left, 1) != " ")
+                else if (substr(blob, index_right, 1) == """")
                 {
                     break
                 }
-                index_left += 1
             }
-            index_right := index_left + 1
+
+            ; Store the key.
+            escaped_key := substr(blob, index_left + 1, index_right - index_left - 1)
+            key := json_unescape(escaped_key)
+        }
+
+        ; Pass over whitespace and any colons that separate key-value pairs.
+        index_left := index_right + 1
+        loop, % blob_length
+        {
+            index_left += 1
+
+            if (not instr("`b`f`n`r`t :", substr(blob, index_left, 1)))
+            {
+                break
+            }
         }
 
         ; If the value isn't a string, adjust the left index to include
@@ -233,6 +255,7 @@ json_load(blob)
         depth := 0
         in_string := true
         value_type := "str"
+        index_right := index_left + 1
         if (substr(blob, index_left, 1) != """")
         {
             in_string := false
@@ -265,6 +288,11 @@ json_load(blob)
         ;   *   {"a": [123, null]}
         loop
         {
+            if (index_right > blob_length)
+            {
+                return info
+            }
+
             if (in_string)
             {
                 ; If the right index is passing through a string and the
@@ -344,11 +372,12 @@ json_load(blob)
             ; literal has been encountered.
             else if (value_type == "literal")
             {
-                if (instr(" ,]}", substr(blob, index_right, 1)))
+                if (instr("`b`f`n`r`t ,]}", substr(blob, index_right, 1)))
                 {
                     break
                 }
             }
+
             index_right += 1
         }
 
@@ -382,18 +411,8 @@ json_load(blob)
         ; Save the key/value pair.
         info[key] := value
 
-        ; Move the indexes.
-        index_left := index_right + 2
-        loop
-        {
-            if (index_left >= strlen(blob) or substr(blob, index_left, 1) != " ")
-            {
-                break
-            }
-            index_left += 1
-        }
-
-        index_right := index_left + 1
+        ; Move the index.
+        index_left := index_right + 1
     }
 
     return info

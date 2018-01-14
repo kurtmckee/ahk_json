@@ -75,6 +75,17 @@ class TestThings(unittest.TestCase):
         actual = ahk_instance.read()
         self.assertEqual(standardize(expected), actual)
 
+    def test_file(self):
+        filename = os.path.join(os.path.dirname(__file__), 'test.json')
+        with open(filename, 'rb') as f:
+            blob = f.read()
+        expected = json.loads(blob.decode('utf-8'))
+
+        instruction = {'function': 'load_file', 'filename': filename}
+        ahk_instance.write(instruction)
+        actual = ahk_instance.read()
+        self.assertEqual(standardize(expected), actual)
+
 
 def find_files(base, extensions):
     for root, directories, files in os.walk(base):
