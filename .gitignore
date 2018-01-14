@@ -1,0 +1,7 @@
+/.hypothesis/
+/.tox/
+/.cache/
+/__pycache__/
+/dist/
+*.pyc
+MANIFEST
