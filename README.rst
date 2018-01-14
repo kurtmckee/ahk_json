@@ -2,16 +2,19 @@ Parse JSON data in AutoHotkey
 *****************************
 
 
-`json.ahk` allows you to parse JSON data in AutoHotkey.
+``ahk_json`` allows you to parse JSON data in AutoHotkey.
 
-It features Unicode support when loading and serializing JSON data, and uses
-AutoHotkey objects to support JSON lists and dictionaries.
+It features Unicode support when loading and serializing JSON data,
+and uses AutoHotkey objects to support JSON lists and dictionaries.
+The code exists in a single file, ``json.ahk``, which you should put
+in your ``lib/`` directory so that it can be found by ``#include``
+directives.
 
-To load JSON data from a string, use the `json_load()` function.
+To load JSON data from a string, use the ``json_load()`` function.
 
 ..  code:: text
 
-    # include <json>
+    #include <json>
 
     blob := "{""a"": ""awesome"", ""b"": [0, 10, 20], ""c"": {""d"": true}}"
     data := json_load(blob)
@@ -21,7 +24,7 @@ To load JSON data from a string, use the `json_load()` function.
     msgbox, % "data['c']['d'] == " . data["c"]["d"]  ; `1`
 
 
-To dump JSON data into a string, use the `json_dump()` function.
+To dump JSON data into a string, use the ``json_dump()`` function.
 
 ..  code:: text
 
@@ -37,7 +40,7 @@ To dump JSON data into a string, use the `json_dump()` function.
 Limitations
 ===========
 
-Due to mistakes in the AutoHotkey design, `json_load()` and `json_dump()` both
+Due to mistakes in the AutoHotkey design, ``json_load()`` and ``json_dump()`` both
 have limitations that currently cannot be corrected.
 
 
@@ -46,7 +49,7 @@ Numeric values are always strings
 
 AutoHotkey makes no distinction between text and numeric values. As a result,
 if JSON data with numeric values is dumped, there is no deterministic way to
-distinguish between a text and a numeric value. Therefore, `json_dump` only
+distinguish between a text and a numeric value. Therefore, ``json_dump()`` only
 outputs strings, even if the value might be numeric:
 
 ..  code:: text
@@ -55,7 +58,7 @@ outputs strings, even if the value might be numeric:
     msgbox, % json_dump(data)  ; `{"int": "0", "str": "0"}`
 
 
-Applications that consume the JSON output from `json.ahk` must convert strings
+Applications that consume the JSON output from ``ahk_json`` must convert strings
 to integers if needed.
 
 
@@ -82,18 +85,18 @@ lose data due to AutoHotkey's behavior.
 Unit tests
 ==========
 
-`ahk_json` uses Python to test the code in `json.ahk`.
+``ahk_json`` uses Python to test the code in ``json.ahk``.
 
 If you want to run the test suite you must install AutoHotkey 1.1.27.04 or
 higher. Python will automatically find and launch AutoHotkey from the
-`PROGRAMFILES` or `PROGRAMFILES(x86)` environment variables.
+``PROGRAMFILES`` or ``PROGRAMFILES(x86)`` environment variables.
 
 
 
 License
 =======
 
-`ahk_json` is released under the terms of `the MIT license`_.
-The text of the license can be found in the `LICENSE.txt` file.
+``ahk_json`` is released under the terms of `the MIT license`_.
+The text of the license can be found in the ``LICENSE.txt`` file.
 
 ..  _the MIT license: https://opensource.org/licenses/MIT
