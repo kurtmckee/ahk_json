@@ -82,10 +82,8 @@ Unit tests
 `ahk_json` uses Python to test the code in `json.ahk`.
 
 If you want to run the test suite you must install AutoHotkey 1.1.27.04 or
-higher. 1.1.17.00 introduced the ability to read from STDIN and write to STDOUT,
-which is how Python sends unit test data to AutoHotkey. However, `ahk_json` is
-only tested with 1.1.27.00 or higher. Python will automatically find and launch
-AutoHotkey from the `PROGRAMFILES` or `PROGRAMFILES(x86)` environment variables.
+higher. Python will automatically find and launch AutoHotkey from the
+`PROGRAMFILES` or `PROGRAMFILES(x86)` environment variables.
 
 
 
