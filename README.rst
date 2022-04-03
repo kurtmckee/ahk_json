@@ -1,3 +1,8 @@
+..  Copyright (c) 2018-2022 Kurt McKee <contactme@kurtmckee.org>
+..  The code is licensed under the terms of the MIT license.
+..  https://github.com/kurtmckee/ahk_json
+
+
 Parse JSON data in AutoHotkey
 *****************************
 

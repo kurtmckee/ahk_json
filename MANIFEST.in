@@ -1,3 +1,0 @@
-graft ahk_json/lib
-include README.rst
-include LICENSE.txt
