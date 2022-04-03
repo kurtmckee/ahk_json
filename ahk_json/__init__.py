@@ -9,23 +9,22 @@ import pathlib
 import subprocess
 import weakref
 
-
-ahk_runner = os.path.join(os.path.dirname(__file__), 'runner.ahk')
+ahk_runner = os.path.join(os.path.dirname(__file__), "runner.ahk")
 
 
 def find_ahk():
     bases = [
         pathlib.Path(__file__).parent.parent,
-        pathlib.Path(os.environ['programfiles']),
+        pathlib.Path(os.environ["programfiles"]),
     ]
-    if os.environ.get('programfiles(x86)'):
-        bases.append(pathlib.Path(os.environ['programfiles(x86)']))
+    if os.environ.get("programfiles(x86)"):
+        bases.append(pathlib.Path(os.environ["programfiles(x86)"]))
 
     paths = [
-        'AutoHotkeyU32.exe',
-        'AutoHotkeyU64.exe',
-        'autohotkey/AutoHotkeyU32.exe',
-        'autohotkey/AutoHotkeyU64.exe',
+        "AutoHotkeyU32.exe",
+        "AutoHotkeyU64.exe",
+        "autohotkey/AutoHotkeyU32.exe",
+        "autohotkey/AutoHotkeyU64.exe",
     ]
     failures = []
     for base in bases:
@@ -35,8 +34,8 @@ def find_ahk():
                 return str(exe)
             failures.append(str(exe))
 
-    msg = 'Unable to find an AutoHotkey executable at these locations:\n\n'
-    msg += '\n'.join(failures)
+    msg = "Unable to find an AutoHotkey executable at these locations:\n\n"
+    msg += "\n".join(failures)
     raise EnvironmentError(msg)
 
 
@@ -61,13 +60,13 @@ class AHK:
         return self
 
     def __exit__(self, *args, **kwargs):
-        self.write({'function': 'exit_ahk'})
+        self.write({"function": "exit_ahk"})
 
     def write(self, command):
-        blob = json.dumps(command, ensure_ascii=True).encode('utf-8')
-        self.instance.stdin.write(blob + '\n'.encode('utf-8'))
+        blob = json.dumps(command, ensure_ascii=True).encode("utf-8")
+        self.instance.stdin.write(blob + "\n".encode("utf-8"))
         self.instance.stdin.flush()
 
     def read(self):
         blob = self.instance.stdout.readline()
-        return json.loads(blob.decode('utf-8'))
+        return json.loads(blob.decode("utf-8"))
