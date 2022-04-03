@@ -17,7 +17,7 @@ directives.
 
 To load JSON data from a string, use the ``json_load()`` function.
 
-..  code:: text
+..  code:: ahk
 
     #include <json>
 
@@ -31,7 +31,7 @@ To load JSON data from a string, use the ``json_load()`` function.
 
 To dump JSON data into a string, use the ``json_dump()`` function.
 
-..  code:: text
+..  code:: ahk
 
     #include <json>
 
@@ -57,7 +57,7 @@ if JSON data with numeric values is dumped, there is no deterministic way to
 distinguish between a text and a numeric value. Therefore, ``json_dump()`` only
 outputs strings, even if the value might be numeric:
 
-..  code:: text
+..  code:: ahk
 
     data := {"int": 0, "str": "0"}
     msgbox, % json_dump(data)  ; `{"int": "0", "str": "0"}`
@@ -74,12 +74,12 @@ AutoHotkey ignores the case of all dictionary keys. As a result, if JSON data
 contains keys that only differ by case, AutoHotkey will quietly overwrite the
 existing data:
 
-..  code:: text
+..  code:: ahk
 
     blob := "{""A"": ""UPPERCASE"", ""a"": ""lowercase""}"
     data := json_load(blob)
     msgbox, % "data['A'] == " . data["A"]  ; `data['A'] == lowercase`
-    
+
 
 Currently there is no known way to force AutoHotkey to respect the case of
 dictionary keys. Applications that load JSON data must be aware that they may
