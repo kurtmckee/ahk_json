@@ -51,7 +51,7 @@ write(info)
 
 identity(parameters)
 {
-    return parameters
+    return json_load(parameters["value"])
 }
 
 

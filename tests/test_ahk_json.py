@@ -7,7 +7,7 @@ import json
 import os
 
 import hypothesis.strategies as st
-from hypothesis import given, settings
+from hypothesis import given, settings, example
 
 import ahk_json
 
@@ -18,39 +18,67 @@ def standardize(thing):
     if isinstance(thing, dict):
         return {standardize(key): standardize(value) for key, value in thing.items()}
     if isinstance(thing, list):
-        return [standardize(value) for value in thing]
+        # If the list is empty, the AHK code will render it as a JSON object.
+        return [standardize(value) for value in thing] or {}
     if isinstance(thing, bool) or thing is None:
         return str(int(thing or 0))
     return str(thing)
 
 
-lowercase_characters = st.characters(
-    blacklist_characters=(
-        [chr(c) for c in range(65, 91)] + [str(i) for i in range(10)] + [chr(0)]
-    )
-)
-text = st.text(alphabet=lowercase_characters)
+def key_filter(value: str) -> bool:
+    """Prevent specific keys from causing problems.
 
-key_strategy = lowercase_characters
-value_strategy = (
-    text
-    | st.integers(min_value=-1000, max_value=1000)
-    | st.sampled_from([1.04, -1.04])
+    *   "1" is blocked to prevent this identity crisis: {"1": {}} -> [{}]
+    *   The rest are blocked because Autohotkey keeps its keys in the same
+        namespace as its underlying methods and attributes.
+
+    """
+
+    return value not in ["1", "base", "length", "__get", "__put"]
+
+
+lowercase_characters = st.characters(
+    blacklist_characters=["\0"],
+    blacklist_categories=["Lu"],
+)
+
+key_strategy = lowercase_characters.filter(key_filter)
+
+literal_strategy = (
+    st.text(alphabet=st.characters(blacklist_characters=["\0"]))
+    | st.integers(min_value=-100000, max_value=100000)
+    | st.floats(min_value=-10.0, max_value=10.0, width=16)
     | st.booleans()
     | st.none()
 )
-json_strategy = st.recursive(
+
+value_strategy = literal_strategy | st.lists(literal_strategy)
+
+object_strategy = st.recursive(
     st.dictionaries(key_strategy, value_strategy),
     lambda children: st.dictionaries(key_strategy, children),
     max_leaves=3,
 )
 
+array_strategy = st.recursive(
+    st.lists(value_strategy),
+    lambda children: st.lists(value_strategy),
+)
 
-@given(json_strategy)
-@settings(max_examples=200)
+
+@given(literal_strategy | array_strategy | object_strategy)
+@settings(max_examples=1000, deadline=500)
+@example(True)
+@example(False)
+@example(None)
+@example("a")
+@example(1)
+@example(1.0)
+@example({"a": "b"})
+@example([1, 2, 3])
 def test_identity(expected):
-    expected["function"] = "identity"
-    ahk_instance.write(expected)
+    directive = {"function": "identity", "value": json.dumps(expected)}
+    ahk_instance.write(directive)
     actual = ahk_instance.read()
     assert standardize(expected) == actual
 
