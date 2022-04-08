@@ -114,7 +114,7 @@ Applications that load JSON data should design their domain-specific JSON schema
 Null characters cannot be used
 ------------------------------
 
-AutoHotkey cannot handle null characters (``\`0``) in strings.
+AutoHotkey cannot handle null characters (``\0``) in strings.
 If a JSON string is loaded with an escaped null character (``\u0000``), data may be lost.
 
 Applications should avoid dealing with null characters in JSON.
