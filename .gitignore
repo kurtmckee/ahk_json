@@ -1,7 +1,11 @@
-/.hypothesis/
-/.tox/
 /.cache/
+/.hypothesis/
+/.idea/
+/.tox/
 /__pycache__/
 /dist/
+/venv/
+/*.egg-info/
+AutoHotkey*.exe
 *.pyc
 MANIFEST

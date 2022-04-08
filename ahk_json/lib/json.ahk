@@ -1,5 +1,5 @@
 ﻿; JSON for AutoHotkey
-; Copyright (c) 2018 Kurt McKee <contactme@kurtmckee.org>
+; Copyright (c) 2018-2022 Kurt McKee <contactme@kurtmckee.org>
 ; The code is licensed under the terms of the MIT license.
 ; https://github.com/kurtmckee/ahk_json
 
@@ -101,6 +101,11 @@ json_unescape(blob)
 
 json_get_object_type(object)
 {
+    if (not isobject(object))
+    {
+        return "string"
+    }
+
     ; Identify the object type and return either "dict" or "list".
     object_type := "list"
     if (object.length() == 0)
@@ -128,6 +133,15 @@ json_dump(info)
 {
     ; Differentiate between a list and a dictionary.
     object_type := json_get_object_type(info)
+
+    if (object_type == "string")
+    {
+        return """" . json_escape(info) . """"
+    }
+    else if (object_type == "number")
+    {
+        return info
+    }
 
     for key, value in info
     {
@@ -169,252 +183,255 @@ json_dump(info)
 }
 
 
+extract_key(blob, index_left)
+{
+    index_right := index_left + 1
+    loop, % (strlen(blob) - index_left + 1)
+    {
+        if (substr(blob, index_right, 1) == "\")
+        {
+            index_right += 1
+        }
+        else if (substr(blob, index_right, 1) == """")
+        {
+            break
+        }
+        else if (index_right > strlen(blob))
+        {
+            throw "UNCLOSED_STRING: No closing quotation mark found"
+        }
+        index_right += 1
+    }
+
+    result := {}
+    result["index_left"] := index_left
+    result["index_right"] := index_right
+    result["value_type"] := "str"
+    ; Exclude quotation marks from the value.
+    result["value"] := json_unescape(substr(blob, index_left + 1, index_right - index_left - 1))
+    return result
+}
+
+
+extract_value(blob, index_left)
+{
+    ; Burn through whitespace.
+    loop
+    {
+        if (instr("`b`f`n`r`t ", substr(blob, index_left, 1)))
+        {
+            index_left += 1
+        }
+        else
+        {
+            break
+        }
+    }
+
+    ; Booleans
+    if (substr(blob, index_left, 4) == "true")
+    {
+        result := {}
+        result["index_left"] := index_left
+        result["index_right"] := index_left + 3
+        result["value_type"] := "bool"
+        result["value"] := true
+        return result
+    }
+    if (substr(blob, index_left, 5) == "false")
+    {
+        result := {}
+        result["index_left"] := index_left
+        result["index_right"] := index_left + 4
+        result["value_type"] := "bool"
+        result["value"] := false
+        return result
+    }
+
+    ; Null
+    if (substr(blob, index_left, 4) == "null")
+    {
+        result := {}
+        result["index_left"] := index_left
+        result["index_right"] := index_left + 3
+        result["value_type"] := "null"
+        result["value"] := false
+        return result
+    }
+
+    ; Numbers
+    if (instr("-0123456789", substr(blob, index_left, 1)))
+    {
+        index_right := index_left
+        loop, % (strlen(blob) - index_left + 1)
+        {
+            index_right += 1
+            if (not instr("0123456789eE-+.", substr(blob, index_right, 1)))
+            {
+                break
+            }
+        }
+
+        result := {}
+        result["index_left"] := index_left
+        result["index_right"] := index_right - 1
+        result["value_type"] := "number"
+        result["value"] := substr(blob, index_left, index_right - index_left)
+        return result
+    }
+
+    ; Strings
+    if (substr(blob, index_left, 1) == """")
+    {
+        return extract_key(blob, index_left)
+    }
+
+
+    ; Arrays
+    if (substr(blob, index_left, 1) == "[")
+    {
+        original_index_left := index_left
+        index_left += 1
+        array_values := []
+        loop
+        {
+            ; Burn through non-value characters.
+            loop
+            {
+                if (index_left > strlen(blob))
+                {
+                    throw "UNCLOSED_ARRAY: No closing bracket was found!"
+                }
+                else if (instr("`b`f`n`r`t ", substr(blob, index_left, 1)))
+                {
+                    index_left += 1
+                }
+                else if (substr(blob, index_left, 1) == ",")
+                {
+                    index_left += 1
+                    break
+                }
+                else if (substr(blob, index_left, 1) == "]")
+                {
+                    ; "]" marks the end of the array.
+                    break, 2
+                }
+                else
+                {
+                    ; Do not increment index_left. This is the start of a value.
+                    break
+                }
+            }
+
+            array_item := extract_value(blob, index_left)
+            index_left := array_item["index_right"] + 1
+            array_values.push(array_item["value"])
+        }
+
+        result := {}
+        result["index_left"] := original_index_left
+        result["index_right"] := index_left
+        result["value_type"] := "array"
+        result["value"] := array_values
+        return result
+    }
+
+    ; Objects
+    if (substr(blob, index_left, 1) == "{")
+    {
+        original_index_left := index_left
+        index_left += 1
+        object_contents := {}
+        loop
+        {
+            ; Burn through non-key characters.
+            loop
+            {
+                if (index_left > strlen(blob))
+                {
+                    throw "UNCLOSED_OBJECT: No closing brace was found!"
+                }
+                else if (instr("`b`f`n`r`t ,", substr(blob, index_left, 1)))
+                {
+                    index_left += 1
+                }
+                else if (substr(blob, index_left, 1) == """")
+                {
+                    ; Do not increment index_left. This is the start of a key.
+                    break
+                }
+                else if (substr(blob, index_left, 1) == "}")
+                {
+                    ; "}" marks the end of the object.
+                    break, 2
+                }
+                else
+                {
+                    throw "UNRECOGNIZED_TEXT: Unrecognized character at " . index_left
+                }
+            }
+
+            object_key := extract_key(blob, index_left)
+            index_left := object_key["index_right"] + 1
+
+            ; Burn through non-value characters.
+            loop
+            {
+                if (index_left > strlen(blob))
+                {
+                    throw "UNCLOSED_OBJECT: No closing brace was found!"
+                }
+                else if (instr("`b`f`n`r`t ", substr(blob, index_left, 1)))
+                {
+                    index_left += 1
+                }
+                else if (substr(blob, index_left, 1) == ":")
+                {
+                    ; ":" separates keys from values.
+                    ; Increment one more time, then exit the loop.
+                    index_left += 1
+                    break
+                }
+                else
+                {
+                    throw "UNRECOGNIZED_TEXT: Unrecognized character or value"
+                }
+            }
+
+            object_value := extract_value(blob, index_left)
+            index_left := object_value["index_right"] + 1
+
+            object_contents[object_key["value"]] := object_value["value"]
+        }
+
+        result := {}
+        result["index_left"] := original_index_left
+        result["index_right"] := index_left
+        result["value_type"] := "object"
+        result["value"] := object_contents
+        return result
+    }
+
+    throw "UNRECOGNIZED_TEXT: Unrecognized character or value"
+}
+
+
 json_load(blob)
 {
     blob_length := strlen(blob)
     index_left := 0
     index_right := 0
 
-    ; Identify the object type.
-    loop, % blob_length
-    {
-        index_left += 1
+    value := extract_value(blob, 1)
 
-        if (substr(blob, a_index, 1) == "[")
+    ; Confirm there is no remaining text.
+    loop, % (strlen(blob) - value["index_right"])
+    {
+        if (not instr("`b`f`n`r`t ", substr(blob, value["index_right"] + a_index, 1)))
         {
-            object_type := "list"
-            info := []
-            break
-        }
-        else if (substr(blob, a_index, 1) == "{")
-        {
-            object_type := "dict"
-            info := {}
-            break
+            throw % "INVALID_JSON: Trailing character at position " . (value["index_right"] + a_index)
         }
     }
 
-    ; Extract all key/value pairs.
-    loop, % blob_length
-    {
-        ; Extract the key.
-        ; Use an integer key if this is a list object.
-        if (object_type == "list")
-        {
-            key := info.length() + 1
-        }
-        else
-        {
-            ; Find the left side of the key.
-            loop, % blob_length
-            {
-                index_left += 1
-
-                if (substr(blob, index_left, 1) == """")
-                {
-                    break
-                }
-            }
-
-            index_right := index_left
-
-            ; Find the right side of the key.
-            loop, % blob_length
-            {
-                index_right += 1
-
-                ; Skip escaped characters, in case they are quotation marks.
-                if (substr(blob, index_right, 1) == "\")
-                {
-                    index_right += 1
-                }
-                else if (substr(blob, index_right, 1) == """")
-                {
-                    break
-                }
-            }
-
-            ; Store the key.
-            escaped_key := substr(blob, index_left + 1, index_right - index_left - 1)
-            key := json_unescape(escaped_key)
-        }
-
-        ; Pass over whitespace and any colons that separate key-value pairs.
-        index_left := index_right + 1
-        loop, % blob_length
-        {
-            index_left += 1
-
-            if (not instr("`b`f`n`r`t :", substr(blob, index_left, 1)))
-            {
-                break
-            }
-        }
-
-        ; If the value isn't a string, adjust the left index to include
-        ; the beginning of the literal, dictionary, or list.
-        depth := 0
-        in_string := true
-        value_type := "str"
-        index_right := index_left + 1
-        if (substr(blob, index_left, 1) != """")
-        {
-            in_string := false
-            value_type := "literal"
-            if (substr(blob, index_left, 1) == "{")
-            {
-                depth := 1
-                value_type := "dict"
-            }
-            else if (substr(blob, index_left, 1) == "[")
-            {
-                depth := 1
-                value_type := "list"
-            }
-
-            index_left -= 1
-        }
-
-        ; Find the right edge of the value.
-        ;
-        ; The loop will isolate the entire value, whether it's a string,
-        ; list, dictionary, boolean, integer, float, or null. For example:
-        ;
-        ;   *   "abc"
-        ;   *   123
-        ;   *   true
-        ;   *   false
-        ;   *   null
-        ;   *   [123, {"abc": true}]
-        ;   *   {"a": [123, null]}
-        loop
-        {
-            if (index_right > blob_length)
-            {
-                return info
-            }
-
-            if (in_string)
-            {
-                ; If the right index is passing through a string and the
-                ; closing quotation mark is encountered, flag that the index
-                ; is no longer in a string, and exit the loop if the value is
-                ; a string.
-                if (substr(blob, index_right, 1) == """")
-                {
-                    in_string := false
-                    if (value_type == "str")
-                    {
-                        break
-                    }
-                }
-                ; If the right index encounters a backslash in a string, the
-                ; next character is guaranteed to still be in the string. Move
-                ; the right index forward an additional character in case
-                ; the escaped character is a quotation mark.
-                else if (substr(blob, index_right, 1) == "\")
-                {
-                    index_right += 1
-                }
-            }
-
-            ; If the right index encounters a quotation mark but is not already
-            ; in a string, flag that the index is now passing through a string.
-            else if (substr(blob, index_right, 1) == """")
-            {
-                in_string := true
-            }
-
-            ; If the value is a dictionary, keep track of the depth of any
-            ; nested dictionaries. If the final closing curly brace is found,
-            ; move the right index forward so that the right curly brace will
-            ; be included in the value and exit the loop.
-            else if (value_type == "dict")
-            {
-                ; If the value is a dictionary
-                if (substr(blob, index_right, 1) == "{")
-                {
-                    depth += 1
-                }
-                else if (substr(blob, index_right, 1) == "}")
-                {
-                    depth -= 1
-                    index_right += 1
-                    if (depth == 0)
-                    {
-                        break
-                    }
-                }
-            }
-
-            ; If the value is a list, keep track of the depth of any nested
-            ; lists. If the final closing bracket is found, move the right
-            ; index forward so that the right bracket will be included in
-            ; the value and exit the loop.
-            else if (value_type == "list")
-            {
-                if (substr(blob, index_right, 1) == "[")
-                {
-                    depth += 1
-                }
-                else if (substr(blob, index_right, 1) == "]")
-                {
-                    index_right += 1
-                    depth -= 1
-                    if (depth == 0)
-                    {
-                        break
-                    }
-                }
-            }
-
-            ; If the value is a literal, such as a boolean or integer, just
-            ; watch for any character that will indicate that the end of the
-            ; literal has been encountered.
-            else if (value_type == "literal")
-            {
-                if (instr("`b`f`n`r`t ,]}", substr(blob, index_right, 1)))
-                {
-                    break
-                }
-            }
-
-            index_right += 1
-        }
-
-        ; Extract the value, now that its left and right sides have been found.
-        value := substr(blob, index_left + 1, index_right - index_left - 1)
-
-        ; Recursively parse dictionaries and lists.
-        if (value_type == "dict" or value_type == "list")
-        {
-            value := json_load(value)
-        }
-        ; Escape string values.
-        else if (value_type == "str")
-        {
-            value := json_unescape(value)
-        }
-        ; Convert boolean and null literals to booleans.
-        else if (value == "true")
-        {
-            value := true
-        }
-        else if (value == "false")
-        {
-            value := false
-        }
-        else if (value == "null")
-        {
-            value := false
-        }
-
-        ; Save the key/value pair.
-        info[key] := value
-
-        ; Move the index.
-        index_left := index_right + 1
-    }
-
-    return info
+    return value["value"]
 }

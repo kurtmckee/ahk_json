@@ -1,4 +1,8 @@
-﻿; runner.ahk uses STDIN and STDOUT to accept unit test inputs.
+﻿; Copyright (c) 2018-2022 Kurt McKee <contactme@kurtmckee.org>
+; The code is licensed under the terms of the MIT license.
+; https://github.com/kurtmckee/ahk_json
+;
+; runner.ahk uses STDIN and STDOUT to accept unit test inputs.
 ; Python submits unit test data through STDIN and runner.ahk
 ; loads and dumps the JSON data back through STDOUT to confirm
 ; that the data is identical.
@@ -47,7 +51,7 @@ write(info)
 
 identity(parameters)
 {
-    return parameters
+    return json_load(parameters["value"])
 }
 
 
