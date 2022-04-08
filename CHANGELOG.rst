@@ -5,6 +5,12 @@ Changelog
 Unreleased changes
 ==================
 
+
+
+
+2.0 - 2022-04-08
+================
+
 *   Overhaul the JSON parser so it handles the entire JSON specification.
     This allows the parser to handle booleans, null, strings, and numbers at the top level of a JSON document.
 *   Support testing using Python 3.6 through 3.10.

@@ -3,7 +3,7 @@
 ; The code is licensed under the terms of the MIT license.
 ; https://github.com/kurtmckee/ahk_json
 
-; VERSION = "1.0"
+; VERSION = "2.0"
 
 
 json_escape(blob)
