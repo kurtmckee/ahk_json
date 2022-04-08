@@ -7,7 +7,7 @@ import json
 import os
 
 import hypothesis.strategies as st
-from hypothesis import given, settings, example
+from hypothesis import example, given, settings
 
 import ahk_json
 
