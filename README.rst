@@ -49,26 +49,42 @@ Due to mistakes in the AutoHotkey design, ``json_load()`` and ``json_dump()`` bo
 have limitations that currently cannot be corrected.
 
 
-Numeric values are always strings
----------------------------------
+Booleans and ``null` are loaded as numbers
+------------------------------------------
 
-AutoHotkey makes no distinction between text and numeric values. As a result,
-if JSON data with numeric values is dumped, there is no deterministic way to
-distinguish between a text and a numeric value. Therefore, ``json_dump()`` only
-outputs strings, even if the value might be numeric:
+AutoHotkey has no concept of booleans or null values.
+Its built-in ``true`` and ``false`` literals are aliases for ``1`` and ``0``, respectively.
+
+To accommodate this limitation, ``json_load()`` loads these JSON values in this way:
+
+=============== ================
+JSON value      AutoHotkey value
+=============== ================
+``true``        ``1``
+``false``       ``0``
+``null``        ``0``
+=============== ================
+
+
+Numbers are dumped as strings
+-----------------------------
+
+AutoHotkey makes no distinction between text and numeric values.
+As a result, when ``json_dump()`` renders values that are not objects or arrays,
+there is no way to determine whether the value is a number or a string.
+Therefore, ``json_dump()`` only outputs strings, even if the value might be numeric:
 
 ..  code:: ahk
 
-    data := {"int": 0, "str": "0"}
-    msgbox, % json_dump(data)  ; `{"int": "0", "str": "0"}`
+    data := {"integer": 0, "float": 1.0}
+    msgbox, % json_dump(data)  ; `{"integer": "0", "float": "1.0"}`
 
 
-Applications that consume the JSON output from ``ahk_json`` must convert strings
-to integers if needed.
+Applications that consume the JSON output from ``ahk_json`` must convert strings to numbers if needed.
 
 
-Dictionary keys are case insensitive
-------------------------------------
+JSON object keys are case insensitive
+-------------------------------------
 
 AutoHotkey ignores the case of all dictionary keys. As a result, if JSON data
 contains keys that only differ by case, AutoHotkey will quietly overwrite the
@@ -81,10 +97,27 @@ existing data:
     msgbox, % "data['A'] == " . data["A"]  ; `data['A'] == lowercase`
 
 
-Currently there is no known way to force AutoHotkey to respect the case of
-dictionary keys. Applications that load JSON data must be aware that they may
-lose data due to AutoHotkey's behavior.
+Currently there is no known way to force AutoHotkey to respect the case of dictionary keys.
+Applications that load JSON data must be aware that they may lose data due to AutoHotkey's behavior.
 
+
+Some key names are reserved
+---------------------------
+
+AutoHotkey stores object data keys in the same namespace as object methods and attributes.
+This means that key names like ``"base"`` and ``"length"`` will collide with AutoHotkey's own methods and attributes.
+
+Currently there is no way to avoid these collisions.
+Applications that load JSON data should design their domain-specific JSON schema to avoid the problem.
+
+
+Null characters cannot be used
+------------------------------
+
+AutoHotkey cannot handle null characters (``\`0``) in strings.
+If a JSON string is loaded with an escaped null character (``\u0000``), data may be lost.
+
+Applications should avoid dealing with null characters in JSON.
 
 
 Unit tests
