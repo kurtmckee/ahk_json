@@ -49,8 +49,8 @@ Due to mistakes in the AutoHotkey design, ``json_load()`` and ``json_dump()`` bo
 have limitations that currently cannot be corrected.
 
 
-Booleans and ``null` are loaded as numbers
-------------------------------------------
+``true``, ``false`` and ``null`` are loaded as numbers
+------------------------------------------------------
 
 AutoHotkey has no concept of booleans or null values.
 Its built-in ``true`` and ``false`` literals are aliases for ``1`` and ``0``, respectively.
